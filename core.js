@@ -1,4 +1,4 @@
-// 1. Injection automatique de Tailwind CSS (0 config, 0 build)
+// 1. Injection automatique de Tailwind CSS
 (function loadTailwind() {
   if (!document.querySelector('script[src*="tailwindcss"]')) {
     const tw = document.createElement('script');
@@ -19,7 +19,9 @@ async function _req(query, options = {}) {
   try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
 
   if (res.status === 401 && !query.includes('action=login')) {
-    if (!location.pathname.includes('/login')) location.href = '/login';
+    if (!location.pathname.includes('/login')) {
+      location.href = '/login';
+    }
   }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
