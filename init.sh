@@ -13,26 +13,24 @@ mkdir -p "$APP/Back" "$APP/Front/Index" && cd "$APP" || exit
 A="false"; [[ "$AUTH" =~ ^[oO] ]] && A="true"
 D="false"; [[ "$ADMIN" =~ ^[oO] ]] && D="true"
 
-# 1. Config dans Back/schema.json
 echo "{\"appName\":\"$APP\",\"auth\":$A,\"admin\":$D,\"tables\":{\"items\":[\"titre\",\"description\",\"statut\"]}}" > Back/schema.json
 
-# 2. Téléchargement des fichiers
-curl -sL "$REPO/index.php" -o index.php
+curl -sL "$REPO/index.html" -o index.html
 curl -sL "$REPO/STACK.md" -o STACK.md
 curl -sL "$REPO/Back/api.php" -o Back/api.php
 curl -sL "$REPO/Back/visualdata.php" -o Back/visualdata.php
-curl -sL "$REPO/Front/Index/index.html" -o Front/Index/index.html
+curl -sL "$REPO/Front/Index/view.html" -o Front/Index/view.html
 
 if [ "$A" = "true" ]; then
   mkdir -p Front/Login
-  curl -sL "$REPO/Front/Login/index.html" -o Front/Login/index.html
+  curl -sL "$REPO/Front/Login/view.html" -o Front/Login/view.html
 fi
 
 if [ "$D" = "true" ]; then
   mkdir -p Front/Admin
-  curl -sL "$REPO/Front/Admin/index.html" -o Front/Admin/index.html
+  curl -sL "$REPO/Front/Admin/view.html" -o Front/Admin/view.html
 fi
 
 echo ""
 echo "Projet '$APP' prêt !"
-echo "Lance-le avec : cd $APP && php -S localhost:8000 index.php"
+echo "Lance-le avec : cd $APP && php -S localhost:8000"
