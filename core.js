@@ -1,13 +1,4 @@
-// 1. Injection automatique de Tailwind CSS
-(function loadTailwind() {
-  if (!document.querySelector('script[src*="tailwindcss"]')) {
-    const tw = document.createElement('script');
-    tw.src = 'https://cdn.tailwindcss.com';
-    document.head.appendChild(tw);
-  }
-})();
-
-// 2. Client HTTP centralisé vers /Back/api.php
+// 1. Client HTTP centralisé vers /Back/api.php
 async function _req(query, options = {}) {
   const res = await fetch(`/Back/api.php?${query}`, {
     credentials: 'same-origin',
@@ -19,13 +10,34 @@ async function _req(query, options = {}) {
   try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
 
   if (res.status === 401 && !query.includes('action=login')) {
-    if (!location.pathname.includes('/login')) {
-      location.href = '/login';
-    }
+    $router.go('login');
   }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
+
+// 2. Micro-routeur SPA (0 rechargement, URL fixe sur localhost:8000)
+window.$router = {
+  routes: {
+    index: '/Front/Index/view.html',
+    login: '/Front/Login/view.html',
+    admin: '/Front/Admin/view.html'
+  },
+  async go(page) {
+    const file = this.routes[page] || this.routes.index;
+    const html = await fetch(file).then(r => r.text());
+    const root = document.getElementById('app');
+    root.innerHTML = html;
+
+    // Exécuter les balises <script> contenues dans la vue chargée
+    root.querySelectorAll('script').forEach(oldScript => {
+      const s = document.createElement('script');
+      s.textContent = oldScript.textContent;
+      document.body.appendChild(s);
+      s.remove();
+    });
+  }
+};
 
 // 3. SDK Base de données ($db)
 window.$db = {
@@ -46,12 +58,13 @@ window.$auth = {
       body: JSON.stringify({ username, password })
     });
     localStorage.setItem('sk_user', JSON.stringify(res.user));
+    $router.go('index');
     return res.user;
   },
   async logout() {
     await _req('action=logout');
     localStorage.removeItem('sk_user');
-    location.href = '/login';
+    $router.go('login');
   },
   user() {
     try { return JSON.parse(localStorage.getItem('sk_user')); } catch { return null; }
