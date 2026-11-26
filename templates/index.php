@@ -1,17 +1,30 @@
 <?php
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 
-// Laisser passer les fichiers statiques existants (Front/*, Back/api.php, etc.)
-if ($uri !== '/' && file_exists(__DIR__ . $uri)) {
+// 1. Laisser passer les vrais fichiers (Back/api.php, assets, etc.)
+if ($uri !== '/' && file_exists(__DIR__ . $uri) && !is_dir(__DIR__ . $uri)) {
     return false;
 }
 
-// Route spéciale /visualdata -> Explorateur BDD Admin
-if ($uri === '/visualdata') {
-    require __DIR__ . '/Back/visualdata.php';
+// 2. Table de routage propre -> Dossiers Front/ et Back/
+$routes = [
+    '/'           => '/Front/Index/index.html',
+    '/index'      => '/Front/Index/index.html',
+    '/login'      => '/Front/Login/index.html',
+    '/admin'      => '/Front/Admin/index.html',
+    '/visualdata' => '/Back/visualdata.php',
+];
+
+if (isset($routes[$uri]) && file_exists(__DIR__ . $routes[$uri])) {
+    $target = __DIR__ . $routes[$uri];
+    if (str_ends_with($target, '.php')) {
+        require $target;
+    } else {
+        header('Content-Type: text/html; charset=UTF-8');
+        readfile($target);
+    }
     exit;
 }
 
-// Racine "/" -> Redirection vers Front/Index/
-header('Location: /Front/Index/');
-exit;
+http_response_code(404);
+echo 'Page introuvable';
