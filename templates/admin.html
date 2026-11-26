@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lvnah/swiftkit@main/core.css">
+</head>
+<body>
+  <nav class="navbar">
+    <strong>Panel Admin</strong>
+    <div>
+      <a href="index.html">Retour App</a>
+      <a href="#" onclick="$auth.logout()">Déconnexion</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="row between">
+      <div id="table-tabs" class="row"></div>
+      <button class="btn primary" onclick="openAdminModal()">+ Ajouter une ligne</button>
+    </div>
+
+    <div class="card mt-2 table-wrap">
+      <table>
+        <thead id="admin-head"></thead>
+        <tbody id="admin-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="admin-modal" class="modal-backdrop">
+    <div class="card modal">
+      <h3 id="admin-modal-title">Édition</h3>
+      <form id="admin-form">
+        <input type="hidden" id="edit-id">
+        <div id="dynamic-fields"></div>
+        <div class="row between mt-3">
+          <button type="button" class="btn" onclick="$ui.closeModal('admin-modal')">Annuler</button>
+          <button type="submit" class="btn primary">Sauvegarder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/gh/lvnah/swiftkit@main/core.js"></script>
+  <script>
+    let schema = {}, currentTable = '', currentRows = [];
+
+    async function initAdmin() {
+      schema = await $db.schema();
+      const tables = Object.keys(schema.tables);
+      $ui.qs('#table-tabs').innerHTML = tables.map(t =>
+        `<button class="btn" id="tab-${t}" onclick="selectTable('${t}')">${t.toUpperCase()}</button>`
+      ).join('');
+      if (tables.length) selectTable(tables[0]);
+    }
+
+    async function selectTable(table) {
+      currentTable = table;
+      document.querySelectorAll('#table-tabs .btn').forEach(b => b.classList.remove('primary'));
+      $ui.qs(`#tab-${table}`)?.classList.add('primary');
+
+      const cols = schema.tables[table];
+      $ui.qs('#admin-head').innerHTML = `<tr><th>ID</th>${cols.map(c => `<th>${c}</th>`).join('')}<th>Actions</th></tr>`;
+
+      currentRows = await $db.list(table);
+      $ui.qs('#admin-body').innerHTML = currentRows.map(row => `
+        <tr>
+          <td>#${row.id}</td>
+          ${cols.map(c => `<td>${$ui.esc(row[c])}</td>`).join('')}
+          <td class="row">
+            <button class="btn sm" onclick="openAdminModal(${row.id})">Éditer</button>
+            <button class="btn sm danger" onclick="deleteRow(${row.id})">Suppr</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAdminModal(id = null) {
+      const cols = schema.tables[currentTable];
+      const row = currentRows.find(r => r.id == id);
+      $ui.qs('#edit-id').value = row ? row.id : '';
+      $ui.qs('#admin-modal-title').textContent = row ? `Modifier #${id}` : `Ajouter dans ${currentTable}`;
+      $ui.qs('#dynamic-fields').innerHTML = cols.map(c => `
+        <div class="mt-2">
+          <label>${c}</label>
+          <input id="dyn-${c}" value="${row ? $ui.esc(row[c]) : ''}">
+        </div>
+      `).join('');
+      $ui.openModal('admin-modal');
+    }
+
+    $ui.qs('#admin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $ui.qs('#edit-id').value;
+      const payload = {};
+      schema.tables[currentTable].forEach(c => payload[c] = $ui.qs(`#dyn-${c}`).value);
+      if (id) await $db.update(currentTable, id, payload);
+      else await $db.create(currentTable, payload);
+      $ui.closeModal('admin-modal');
+      $ui.toast('Enregistré');
+      selectTable(currentTable);
+    });
+
+    async function deleteRow(id) {
+      if (!confirm('Confirmer la suppression ?')) return;
+      await $db.delete(currentTable, id);
+      selectTable(currentTable);
+    }
+
+    initAdmin();
+  </script>
+</body>
+</html>
