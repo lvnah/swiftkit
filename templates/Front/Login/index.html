@@ -1,12 +1,4 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connexion</title>
-  <script src="https://cdn.jsdelivr.net/gh/lvnah/swiftkit@main/core.js"></script>
-</head>
-<body class="bg-[#0e0f11] text-gray-100 min-h-screen flex items-center justify-center p-4">
+<div class="min-h-screen flex items-center justify-center p-4">
   <div class="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
     <h2 class="text-xl font-bold mb-6">Connexion</h2>
     <form id="login-form" class="space-y-4">
@@ -23,17 +15,15 @@
       </button>
     </form>
   </div>
+</div>
 
-  <script>
-    $ui.qs('#login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        await $auth.login($ui.qs('#username').value, $ui.qs('#password').value);
-        location.href = '/Front/Index/';
-      } catch (err) {
-        $ui.toast(err.message);
-      }
-    });
-  </script>
-</body>
-</html>
+<script>
+  $ui.qs('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await $auth.login($ui.qs('#username').value, $ui.qs('#password').value);
+    } catch (err) {
+      $ui.toast(err.message);
+    }
+  });
+</script>
