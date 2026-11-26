@@ -35,7 +35,6 @@ window.$db = {
   create: (table, payload) => _req(`table=${table}`, { method: 'POST', body: JSON.stringify(payload) }),
   update: (table, id, payload) => _req(`table=${table}&id=${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   delete: (table, id) => _req(`table=${table}&id=${id}`, { method: 'DELETE' }),
-  // Accès Admin complet (inclut _users)
   visualAll: () => _req('action=visual_all')
 };
 
@@ -52,7 +51,7 @@ window.$auth = {
   async logout() {
     await _req('action=logout');
     localStorage.removeItem('sk_user');
-    location.href = '/Front/Login/';
+    location.href = '/login';
   },
   user() {
     try { return JSON.parse(localStorage.getItem('sk_user')); } catch { return null; }
