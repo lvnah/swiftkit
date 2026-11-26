@@ -14,14 +14,14 @@ async function _req(query, options = {}) {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options
   });
-  const data = await res.json().catch(() => ({}));
+  const text = await res.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
 
   if (res.status === 401 && !query.includes('action=login')) {
-    if (!location.pathname.includes('/Front/Login')) {
-      location.href = '/Front/Login/';
-    }
+    if (!location.pathname.includes('/login')) location.href = '/login';
   }
-  if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
 
