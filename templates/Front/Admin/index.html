@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin</title>
+  <script src="https://cdn.jsdelivr.net/gh/lvnah/swiftkit@main/core.js"></script>
+</head>
+<body class="bg-[#0e0f11] text-gray-100 min-h-screen">
+  <nav class="border-b border-zinc-800 bg-zinc-950/80 px-6 py-4 flex justify-between items-center">
+    <strong class="text-lg font-bold">Panel Admin</strong>
+    <div class="flex gap-5 text-sm">
+      <a href="/Front/Index/" class="text-gray-300 hover:text-white">Retour App</a>
+      <a href="/visualdata" class="text-violet-400 hover:text-violet-300">VisualData</a>
+      <a href="#" onclick="$auth.logout()" class="text-red-400 hover:text-red-300">Déconnexion</a>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto p-6">
+    <div class="flex justify-between items-center flex-wrap gap-3 mb-6">
+      <div id="table-tabs" class="flex gap-2 flex-wrap"></div>
+      <button onclick="openAdminModal()" class="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg">
+        + Ajouter une ligne
+      </button>
+    </div>
+
+    <div class="bg-zinc-900/70 border border-zinc-800 rounded-xl overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead id="admin-head" class="border-b border-zinc-800 text-xs uppercase text-gray-400 bg-zinc-950/40"></thead>
+        <tbody id="admin-body" class="divide-y divide-zinc-800/70"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="admin-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+      <h3 id="admin-modal-title" class="text-lg font-bold mb-4">Édition</h3>
+      <form id="admin-form" class="space-y-3">
+        <input type="hidden" id="edit-id">
+        <div id="dynamic-fields" class="space-y-3"></div>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="$ui.closeModal('admin-modal')" class="px-4 py-2 rounded-lg border border-zinc-700 text-sm">Annuler</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium">Sauvegarder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let schema = {}, currentTable = '', currentRows = [];
+
+    async function initAdmin() {
+      schema = await $db.schema();
+      const tables = Object.keys(schema.tables);
+      $ui.qs('#table-tabs').innerHTML = tables.map(t =>
+        `<button id="tab-${t}" onclick="selectTable('${t}')" class="px-3.5 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 text-xs uppercase font-semibold">${t}</button>`
+      ).join('');
+      if (tables.length) selectTable(tables[0]);
+    }
+
+    async function selectTable(table) {
+      currentTable = table;
+      document.querySelectorAll('#table-tabs button').forEach(b => b.classList.remove('bg-violet-600', 'border-violet-500'));
+      $ui.qs(`#tab-${table}`)?.classList.add('bg-violet-600', 'border-violet-500');
+
+      const cols = schema.tables[table];
+      $ui.qs('#admin-head').innerHTML = `<tr><th class="p-3">ID</th>${cols.map(c => `<th class="p-3">${c}</th>`).join('')}<th class="p-3">Actions</th></tr>`;
+
+      currentRows = await $db.list(table);
+      $ui.qs('#admin-body').innerHTML = currentRows.map(row => `
+        <tr class="hover:bg-zinc-800/40">
+          <td class="p-3 text-gray-400">#${row.id}</td>
+          ${cols.map(c => `<td class="p-3">${$ui.esc(row[c])}</td>`).join('')}
+          <td class="p-3 flex gap-2">
+            <button onclick="openAdminModal(${row.id})" class="px-2.5 py-1 rounded bg-zinc-800 text-xs">Éditer</button>
+            <button onclick="deleteRow(${row.id})" class="px-2.5 py-1 rounded border border-red-500/40 text-red-400 text-xs">Suppr</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAdminModal(id = null) {
+      const cols = schema.tables[currentTable];
+      const row = currentRows.find(r => r.id == id);
+      $ui.qs('#edit-id').value = row ? row.id : '';
+      $ui.qs('#admin-modal-title').textContent = row ? `Modifier #${id}` : `Ajouter dans ${currentTable}`;
+      $ui.qs('#dynamic-fields').innerHTML = cols.map(c => `
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">${c}</label>
+          <input id="dyn-${c}" value="${row ? $ui.esc(row[c]) : ''}" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm">
+        </div>
+      `).join('');
+      $ui.openModal('admin-modal');
+    }
+
+    $ui.qs('#admin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $ui.qs('#edit-id').value;
+      const payload = {};
+      schema.tables[currentTable].forEach(c => payload[c] = $ui.qs(`#dyn-${c}`).value);
+      if (id) await $db.update(currentTable, id, payload);
+      else await $db.create(currentTable, payload);
+      $ui.closeModal('admin-modal');
+      $ui.toast('Enregistré');
+      selectTable(currentTable);
+    });
+
+    async function deleteRow(id) {
+      if (!confirm('Confirmer la suppression ?')) return;
+      await $db.delete(currentTable, id);
+      selectTable(currentTable);
+    }
+
+    initAdmin();
+  </script>
+</body>
+</html>
